@@ -1,9 +1,7 @@
 package app;
 
 import mindustry.plugin.Plugin;
-import mindustry.Vars;
 import mindustry.entities.type.Player;
-
 
 import org.takes.Response;
 import org.takes.http.Exit;
@@ -12,12 +10,15 @@ import org.takes.facets.fork.RqRegex;
 import org.takes.facets.fork.FkRegex;
 import org.takes.facets.fork.TkRegex;
 import org.takes.facets.fork.TkFork;
+import org.takes.rs.RsWithType.Json;
 import org.takes.rs.RsText;
 
 import arc.util.*;
 import org.json.simple.JSONObject;
 
 import java.util.*;
+
+import static mindustry.Vars.*;
 
 public class App extends Plugin {
     public App() {
@@ -29,12 +30,11 @@ public class App extends Plugin {
                       new TkRegex() {
                          @Override
                          public Response act(final RqRegex req) {
-							Log.info("req");
                            List<JSONObject> players = new ArrayList<JSONObject>();
 
                            JSONObject r = new JSONObject();
 
-                           for(Player p : Vars.playerGroup.all()){
+                           for(Player p : playerGroup.all()){
                                JSONObject obj = new JSONObject();
                                obj.put("name", p.name);
                                obj.put("id", p.id);
@@ -49,12 +49,20 @@ public class App extends Plugin {
                            }
 
                            r.put("players", players);
-                           return new RsText(r.toString());
+
+                           JSONObject status = new JSONObject();
+
+                          status.put("map", world.getMap());
+                          status.put("wave", state.wave);
+
+                          r.put("status", status);
+
+                           return new Json(new RsText(r.toString()));
                          }
                        }
                     )
 
-                  ), 8080).start(Exit.NEVER);
+                  ), 5678).start(Exit.NEVER);
 
             } catch (Exception e) {
                 throw new RuntimeException(e);
