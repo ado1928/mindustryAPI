@@ -1,7 +1,7 @@
 {
   "name": "MindustryAPI",
   "author": "Ado",
-  "main": "app.App",
+  "main": "app.Main",
   "description": "A Mindustry HTTP API plugin",
   "version": 1.0
 }

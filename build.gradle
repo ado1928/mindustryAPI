@@ -17,8 +17,8 @@ ext{
 dependencies{
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
+  	implementation 'org.nanohttpd:nanohttpd:2.3.1'
 
-  	compile group: 'org.takes', name: 'takes', version: '1.11.3'
     compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
 }
 
