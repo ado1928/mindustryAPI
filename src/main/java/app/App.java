@@ -1,12 +1,20 @@
+
 package app;
 
-import java.io.IOException;
+import arc.util.Log;
 import fi.iki.elonen.NanoHTTPD;
-import org.json.simple.JSONObject;
+import java.io.IOException;
 import java.util.*;
-import arc.util.*;
+import mindustry.core.GameState.State;
 import mindustry.entities.type.Player;
+import mindustry.net.Packets.KickReason;
+import org.json.simple.JSONObject;
+
 import static mindustry.Vars.*;
+/*
+TODO:
+
+*/
 
 public class App extends NanoHTTPD {
 
@@ -49,32 +57,41 @@ public class App extends NanoHTTPD {
           return newFixedLengthResponse(Response.Status.OK, "application/json", r.toString()); // respond with the json
 
         case "/call":
+          if(!state.is(State.playing)){
+              return newFixedLengthResponse("Not hosting a game yet. Calm down.");
+          }
+
           Map<String, List<String>> params = session.getParameters();
-          Map<String, String> headers = session.getHeaders();
+
+          String query = params.get("q").get(0);
+
+          Player target;
 
           switch(params.get("procedure").get(0)) {
 
               case "kick":
-                int id = Integer.parseInt(params.get("id").get(0));
-                playerGroup.find(p -> p.id == id).con.kick("[scarlet]You have been kicked by the server!");
-                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Kicked ID " + id + " successfully!");
+                target = playerGroup.find(p -> p.id == Integer.parseInt(query));
+                if (target == null) {return newFixedLengthResponse("Error: target is null");}
+                target.con.kick(KickReason.kick);
+                return newFixedLengthResponse("Kicked " + target.name + " successfully!");
 
               case "banID":
-                netServer.admins.banPlayer(params.get("id").get(0));
-                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Banned UUID " + params.get("id").get(0) + " successfully!");
+                target = playerGroup.find(p -> p.uuid.equals(query.replace("-", "+").replace("_", "/")));
+                if (target == null) {return newFixedLengthResponse("Error: target is null");}
+                netServer.admins.banPlayer(target.uuid);
+                return newFixedLengthResponse("Banned " + target.name + " successfully!");
 
               case "banIP":
-                netServer.admins.banPlayerIP(params.get("ip").get(0));
-                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Banned IP " + params.get("ip").get(0) + " successfully!");
+                netServer.admins.banPlayerIP(query);
+                return newFixedLengthResponse("Banned IP " + query + " successfully!");
 
               case "unbanIP":
-                netServer.admins.unbanPlayerIP(params.get("ip").get(0));
-                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Unbanned IP " + params.get("ip").get(0) + " successfully!");
-
+                netServer.admins.unbanPlayerIP(query);
+                return newFixedLengthResponse("Unbanned IP " + query + " successfully!");
 
               case "unbanID":
-                netServer.admins.unbanPlayerID(params.get("id").get(0));
-                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Unbanned IP " + params.get("id").get(0) + " successfully!");
+                netServer.admins.unbanPlayerID(query.replace("-", "+").replace("_", "/"));
+                return newFixedLengthResponse("Unbanned UUID " + query + " successfully!");
 
             }
           return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "400 Bad Request"); // if a procedure is not specified, too bad!
