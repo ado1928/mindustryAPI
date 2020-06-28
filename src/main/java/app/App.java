@@ -60,14 +60,22 @@ public class App extends NanoHTTPD {
                 return newFixedLengthResponse(Response.Status.OK, "text/plain", "Kicked ID " + id + " successfully!");
 
               case "banID":
-                String uuid = params.get("id").get(0);
-                netServer.admins.banPlayer(uuid);
-                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Banned UUID " + uuid + " successfully!");
+                netServer.admins.banPlayer(params.get("id").get(0));
+                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Banned UUID " + params.get("id").get(0) + " successfully!");
 
               case "banIP":
-                String ip = params.get("ip").get(0);
-                netServer.admins.banPlayerIP(ip);
-                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Banned IP " + ip + " successfully!");
+                netServer.admins.banPlayerIP(params.get("ip").get(0));
+                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Banned IP " + params.get("ip").get(0) + " successfully!");
+
+              case "unbanIP":
+                netServer.admins.unbanPlayerIP(params.get("ip").get(0));
+                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Unbanned IP " + params.get("ip").get(0) + " successfully!");
+
+
+              case "unbanID":
+                netServer.admins.unbanPlayerID(params.get("id").get(0));
+                return newFixedLengthResponse(Response.Status.OK, "text/plain", "Unbanned IP " + params.get("id").get(0) + " successfully!");
+
             }
           return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "400 Bad Request"); // if a procedure is not specified, too bad!
       }
