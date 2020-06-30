@@ -166,7 +166,6 @@ public class App extends NanoHTTPD {
       }
       if (Arrays.asList(new File("web").list()).contains(uri.substring(uri.indexOf("/") + 1))) {
         String mime;
-        Log.info(uri.substring(uri.lastIndexOf(".") + 1));
         switch (uri.substring(uri.lastIndexOf(".") + 1)) {
           case "html":
             mime = "text/html";
@@ -189,7 +188,6 @@ public class App extends NanoHTTPD {
           default:
             mime = "application";
         }
-        Log.info(mime);
         return newChunkedResponse(Response.Status.OK, mime, new FileInputStream(new File("web" + uri)));
 
       } else {
