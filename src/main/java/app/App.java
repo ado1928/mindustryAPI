@@ -1,19 +1,29 @@
 
 package app;
 
-import arc.util.Log;
-import fi.iki.elonen.NanoHTTPD;
-import java.io.*;
-import java.util.*;
-import mindustry.core.GameState.State;
-import mindustry.entities.type.Player;
-import mindustry.net.Packets.KickReason;
-import mindustry.net.Administration.PlayerInfo;
-import org.json.simple.JSONObject;
+import static mindustry.Vars.netServer;
+import static mindustry.Vars.playerGroup;
+import static mindustry.Vars.state;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
-import static mindustry.Vars.*;
+import org.json.simple.JSONObject;
+
+import arc.struct.Array;
+import arc.util.Log;
+import fi.iki.elonen.NanoHTTPD;
+import mindustry.core.GameState.State;
+import mindustry.entities.type.Player;
+import mindustry.net.Administration.PlayerInfo;
+import mindustry.net.Packets.KickReason;
 
 public class App extends NanoHTTPD {
 
@@ -23,17 +33,26 @@ public class App extends NanoHTTPD {
     Log.info("Mindustry API running!");
   }
 
+  public List<String> arrayToList(Array a) {
+    List<String> l = new ArrayList<String>();
+
+    for (int i = 0; i < a.size; i++) {
+      l.add(a.get(i).toString());
+    }
+    return l;
+  }
+
   @Override
   public Response serve(final IHTTPSession session) {
     try {
       JSONObject r;
       Player target;
       PlayerInfo pi;
-      final Map<String, List<String>> params = session.getParameters();
       String query;
       List<JSONObject> idbans;
       List<JSONObject> players;
       JSONObject pj;
+      final Map<String, List<String>> params = session.getParameters();
       final String uri = session.getUri();
 
       switch (uri) {
@@ -108,8 +127,8 @@ public class App extends NanoHTTPD {
 
           for (final PlayerInfo p : netServer.admins.getBanned()) {
             pj = new JSONObject(); // player json object
-            pj.put("names", p.names);
-            pj.put("ips", p.ips);
+            pj.put("names", arrayToList(p.names));
+            pj.put("ips", arrayToList(p.ips));
             pj.put("id", p.id);
             idbans.add(pj);
           }
@@ -135,8 +154,8 @@ public class App extends NanoHTTPD {
           r.put("id", pi.id);
           r.put("lastName", pi.lastName);
           r.put("lastIP", pi.lastIP);
-          r.put("ips", pi.ips);
-          r.put("names", pi.names);
+          r.put("ips", arrayToList(pi.ips));
+          r.put("names", arrayToList(pi.names));
           r.put("timesKicked", pi.timesKicked);
           r.put("timesJoined", pi.timesJoined);
           r.put("banned", pi.banned);
@@ -146,8 +165,33 @@ public class App extends NanoHTTPD {
           return newFixedLengthResponse(Response.Status.OK, "application/json", r.toString());
       }
       if (Arrays.asList(new File("web").list()).contains(uri.substring(uri.indexOf("/") + 1))) {
-        return newFixedLengthResponse(Response.Status.OK, "application",
-            new String(Files.readAllBytes(Paths.get("web" + uri))));
+        String mime;
+        Log.info(uri.substring(uri.lastIndexOf(".") + 1));
+        switch (uri.substring(uri.lastIndexOf(".") + 1)) {
+          case "html":
+            mime = "text/html";
+            break;
+          case "js":
+            mime = "text/javascript";
+            break;
+          case "ttf":
+            mime = "font/ttf";
+            break;
+          case "woff":
+            mime = "font/woff";
+            break;
+          case "png":
+            mime = "image/png";
+            break;
+          case "ico":
+            mime = "image/vnd.microsoft.icon";
+            break;
+          default:
+            mime = "application";
+        }
+        Log.info(mime);
+        return newChunkedResponse(Response.Status.OK, mime, new FileInputStream(new File("web" + uri)));
+
       } else {
         return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "404 Not Found");
       }
