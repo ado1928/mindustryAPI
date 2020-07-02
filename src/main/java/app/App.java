@@ -33,8 +33,8 @@ public class App extends NanoHTTPD {
     Log.info("Mindustry API running!");
   }
 
-  public List<String> arrayToList(Array a) {
-    List<String> l = new ArrayList<String>();
+  public List<String> arrayToList(final Array a) {
+    final List<String> l = new ArrayList<String>();
 
     for (int i = 0; i < a.size; i++) {
       l.add(a.get(i).toString());
@@ -78,9 +78,6 @@ public class App extends NanoHTTPD {
           return newFixedLengthResponse(Response.Status.OK, "application/json", r.toString());
 
         case "/call":
-          if (!state.is(State.playing)) {
-            return newFixedLengthResponse("Not hosting a game yet. Calm down.");
-          }
 
           query = params.get("q").get(0);
 
@@ -95,9 +92,11 @@ public class App extends NanoHTTPD {
               return newFixedLengthResponse("Kicked " + target.name + " successfully!");
 
             case "banID":
-              target = playerGroup.find(p -> p.uuid.equals(query.replace("-", "+").replace("_", "/")));
+              final String uuid = query.replace("-", "+").replace("_", "/");
+              target = playerGroup.find(p -> p.uuid.equals(uuid));
               if (target == null) {
-                return newFixedLengthResponse("Error: target is null");
+                netServer.admins.banPlayer(uuid);
+                return newFixedLengthResponse("Target was null. Banned offline UUID " + uuid);
               }
               netServer.admins.banPlayer(target.uuid);
               target.con.kick(KickReason.banned);
@@ -129,13 +128,14 @@ public class App extends NanoHTTPD {
             pj = new JSONObject(); // player json object
             pj.put("names", arrayToList(p.names));
             pj.put("ips", arrayToList(p.ips));
+            pj.put("lastName", p.lastName);
             pj.put("id", p.id);
             idbans.add(pj);
           }
 
           r.put("id", idbans);
 
-          r.put("ip", netServer.admins.getBannedIPs());
+          r.put("ip", arrayToList(netServer.admins.getBannedIPs()));
 
           return newFixedLengthResponse(Response.Status.OK, "application/json", r.toString());
 
@@ -166,37 +166,43 @@ public class App extends NanoHTTPD {
       }
       if (Arrays.asList(new File("web").list()).contains(uri.substring(uri.indexOf("/") + 1))) {
         String mime;
+        String cc;
         switch (uri.substring(uri.lastIndexOf(".") + 1)) {
           case "html":
             mime = "text/html";
+            cc = "no-cache";
             break;
           case "js":
             mime = "text/javascript";
+            cc = "no-cache";
             break;
-          case "ttf":
-            mime = "font/ttf";
-            break;
-          case "woff":
-            mime = "font/woff";
+          case "woff2":
+            mime = "font/woff2";
+            cc = "public, max-age=604800, immutable";
             break;
           case "png":
             mime = "image/png";
+            cc = "public, max-age=86400, immutable";
             break;
           case "ico":
             mime = "image/vnd.microsoft.icon";
+            cc = "public, max-age=86400, immutable";
             break;
           default:
             mime = "application";
+            cc = "no-store";
         }
-        return newChunkedResponse(Response.Status.OK, mime, new FileInputStream(new File("web" + uri)));
+        final Response res = newChunkedResponse(Response.Status.OK, mime, new FileInputStream(new File("web" + uri)));
+        res.addHeader("Cache-Control", cc);
+        return res;
+
 
       } else {
         return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "404 Not Found");
       }
 
     } catch (final Exception e) {
-      return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain",
-          "An error has occurred while processing your request: " + e);
+      return newFixedLengthResponse("An error has occurred while processing your request: " + e);
     }
   }
 }
