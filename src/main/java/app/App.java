@@ -3,7 +3,6 @@ package app;
 
 import static mindustry.Vars.netServer;
 import static mindustry.Vars.playerGroup;
-import static mindustry.Vars.state;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,7 +19,6 @@ import org.json.simple.JSONObject;
 import arc.struct.Array;
 import arc.util.Log;
 import fi.iki.elonen.NanoHTTPD;
-import mindustry.core.GameState.State;
 import mindustry.entities.type.Player;
 import mindustry.net.Administration.PlayerInfo;
 import mindustry.net.Packets.KickReason;
@@ -195,7 +193,6 @@ public class App extends NanoHTTPD {
         final Response res = newChunkedResponse(Response.Status.OK, mime, new FileInputStream(new File("web" + uri)));
         res.addHeader("Cache-Control", cc);
         return res;
-
 
       } else {
         return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "404 Not Found");
