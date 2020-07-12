@@ -1,6 +1,9 @@
-
 package app;
 
+import static app.Main.cookies;
+import static app.Main.logfile;
+import static app.Main.password;
+import static app.Main.port;
 import static mindustry.Vars.netServer;
 import static mindustry.Vars.playerGroup;
 
@@ -13,29 +16,31 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
 
 import org.json.simple.JSONObject;
 
 import arc.files.Fi;
 import arc.struct.Array;
-import arc.util.Log;
 import fi.iki.elonen.NanoHTTPD;
 import mindustry.entities.type.Player;
 import mindustry.net.Administration.PlayerInfo;
 import mindustry.net.Packets.KickReason;
 
 public class App extends NanoHTTPD {
-
-  String password = new Fi("password").readString();
-  ArrayList<String> tokens = new ArrayList<>(Arrays.asList(new Fi("trustedCookies").readString().split("\n")));
+  ArrayList<String> tokens = new ArrayList<>(Arrays.asList(cookies.readString().split("\n")));
+  Logger log = Logger.getLogger(App.class.getName());
 
   public App() throws IOException {
-    super(80);
+    super(port);
+    log.addHandler(new ConsoleHandler());
+    log.addHandler(new FileHandler);
     start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
-    Log.info("Mindustry API running!");
+    log.info("Mindustry API running on port " + port);
   }
-
-  public List<String> arrayToList(final Array a) {
+  public List<String> arrayToList(final Array<String> a) {
     final List<String> l = new ArrayList<String>();
     for (int i = 0; i < a.size; i++) {
       l.add(a.get(i).toString());
@@ -45,20 +50,22 @@ public class App extends NanoHTTPD {
 
   @Override
   public Response serve(final IHTTPSession session) {
-    try {
-      JSONObject r;
-      Player target;
-      PlayerInfo pi;
-      String query;
-      List<JSONObject> idbans;
-      List<JSONObject> players;
-      JSONObject pj;
+    String ip = session.getRemoteIpAddress();
+    JSONObject r;
+    Player target;
+    PlayerInfo pi;
+    String query;
+    List<JSONObject> idbans;
+    List<JSONObject> players;
+    JSONObject pj;
 
-      final Map<String, List<String>> params = session.getParameters();
-      final Map<String, String> headers = session.getHeaders();
-      final CookieHandler ch = new CookieHandler(headers);
-      final String uri = session.getUri();
-      final Response res;
+    final Map<String, List<String>> params = session.getParameters();
+    final Map<String, String> headers = session.getHeaders();
+    final CookieHandler ch = new CookieHandler(headers);
+    final String uri = session.getUri();
+    final Response res;
+
+    try {
 
       if (uri.equals("/auth") && params.containsKey("password")) {
         if (params.get("password").get(0).equals(password)) {
@@ -67,7 +74,8 @@ public class App extends NanoHTTPD {
           String str = new String(Base64.getEncoder().encode(b));
           ch.set("token", str, 7776000);
           tokens.add(str);
-          new Fi("trustedCookies").writeString(String.join("\n", tokens));
+          cookies.writeString(String.join("\n", tokens));
+          log.info(ip + " has been assigned cookie " + str);
           res = newFixedLengthResponse(Response.Status.OK, "application/json", "OK");
           ch.unloadQueue(res);
           return res;
@@ -77,6 +85,7 @@ public class App extends NanoHTTPD {
       if (tokens.contains(ch.read("token"))) {
         switch (uri) {
           case "/":
+            log.info(ip + " has requested index.html");
             return newFixedLengthResponse(Response.Status.OK, "text/html", new Fi("web/index.html").readString());
           case "/players":
             r = new JSONObject();
@@ -101,6 +110,7 @@ public class App extends NanoHTTPD {
           case "/call":
 
             query = params.get("q").get(0);
+            log.info(ip + " has called procedure " + params.get("procedure").get(0) + " with query " + query);
 
             switch (params.get("procedure").get(0)) {
 
@@ -223,11 +233,14 @@ public class App extends NanoHTTPD {
           return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "404 Not Found");
         }
       } else {
+        log.warning(ip + " has attempted to enter the site without a valid cookie");
         return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "NO");
       }
     } catch (
 
     final Exception e) {
+      log.severe(ip + " has encountered " + e + " with URI " + uri);
+      log.severe(e.printStackTrace());
       return newFixedLengthResponse("An error has occurred while processing your request: " + e);
     }
 
